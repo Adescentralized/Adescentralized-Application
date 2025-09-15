@@ -80,7 +80,12 @@ app.post('/wallet/login', (req, res) => {
             return res.status(401).json({ error: 'Invalid password' });
         }
 
-        res.status(200).json({ message: 'Login successful', publicKey: row.publicKey });
+        res.status(200).json({ 
+            id: row.id,
+            email: row.email,
+            message: 'Login successful', 
+            publicKey: row.publicKey 
+        });
     });
 });
 
@@ -182,6 +187,7 @@ app.post('/transfer', async (req, res) => {
 
 // Advertisements
 app.post('/advertisements', (req, res) => {
+    //
 });
 
 const db = require('./src/database.js');
