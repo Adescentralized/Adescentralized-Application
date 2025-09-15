@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Stellar Ads Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+            max-width: 400px;
+            width: 90%;
+        }
+        
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .logo h1 {
+            color: #5a67d8;
+            margin-bottom: 10px;
+            font-size: 2rem;
+        }
+        
+        .logo p {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #5a67d8;
+            transform: translateY(-2px);
+        }
+        
+        .btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 16px;
+            transition: transform 0.2s ease;
+            margin-bottom: 15px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+        }
+        
+        .divider {
+            text-align: center;
+            margin: 20px 0;
+            color: #666;
+            position: relative;
+        }
+        
+        .divider:before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #e2e8f0;
+        }
+        
+        .divider span {
+            background: white;
+            padding: 0 15px;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        
+        .alert-success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+        
+        .alert-error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 1px solid #fc8181;
+        }
+        
+        .features {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+        }
+        
+        .features h3 {
+            color: #5a67d8;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 18px;
+        }
+        
+        .features ul {
+            list-style: none;
+            color: #4a5568;
+        }
+        
+        .features ul li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .features ul li:before {
+            content: '✅';
+            position: absolute;
+            left: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <h1>🚀 Stellar Ads</h1>
+            <p>Plataforma de Anúncios Descentralizada</p>
+        </div>
+
+        <div id="alert-container"></div>
+
+        <!-- Formulário de Login -->
+        <div id="login-form">
+            <h2 style="margin-bottom: 20px; color: #4a5568;">Fazer Login</h2>
+            <div class="form-group">
+                <label for="login-email">📧 Email</label>
+                <input type="email" id="login-email" placeholder="seu@email.com" required>
+            </div>
+            <div class="form-group">
+                <label for="login-password">🔒 Senha</label>
+                <input type="password" id="login-password" placeholder="••••••••" required>
+            </div>
+            <button class="btn" onclick="login()">🚀 Entrar</button>
+            
+            <div class="divider">
+                <span>ou</span>
+            </div>
+            
+            <button class="btn btn-secondary" onclick="showRegisterForm()">✨ Criar Nova Conta</button>
+        </div>
+
+        <!-- Formulário de Registro -->
+        <div id="register-form" style="display: none;">
+            <h2 style="margin-bottom: 20px; color: #4a5568;">Criar Conta</h2>
+            <div class="form-group">
+                <label for="register-email">📧 Email</label>
+                <input type="email" id="register-email" placeholder="seu@email.com" required>
+            </div>
+            <div class="form-group">
+                <label for="register-password">🔒 Senha</label>
+                <input type="password" id="register-password" placeholder="••••••••" required>
+            </div>
+            <div class="form-group">
+                <label for="register-confirm">🔒 Confirmar Senha</label>
+                <input type="password" id="register-confirm" placeholder="••••••••" required>
+            </div>
+            <button class="btn btn-secondary" onclick="register()">🎯 Criar Conta & Carteira Stellar</button>
+            
+            <div class="divider">
+                <span>ou</span>
+            </div>
+            
+            <button class="btn" onclick="showLoginForm()">⬅️ Voltar ao Login</button>
+        </div>
+
+        <div class="features">
+            <h3>🎯 O que você pode fazer:</h3>
+            <ul>
+                <li>Criar campanhas publicitárias</li>
+                <li>Cadastrar sites para monetizar</li>
+                <li>Receber pagamentos em XLM</li>
+                <li>Acompanhar métricas em tempo real</li>
+                <li>Gerar recompensas para usuários</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Alternar entre formulários
+        function showRegisterForm() {
+            document.getElementById('login-form').style.display = 'none';
+            document.getElementById('register-form').style.display = 'block';
+        }
+
+        function showLoginForm() {
+            document.getElementById('register-form').style.display = 'none';
+            document.getElementById('login-form').style.display = 'block';
+        }
+
+        // Fazer login
+        async function login() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            if (!email || !password) {
+                showAlert('Por favor, preencha todos os campos', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/wallet/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showAlert('Login realizado com sucesso!', 'success');
+                    
+                    // Armazenar informações do usuário
+                    localStorage.setItem('stellar-ads-user-id', result.id);
+                    localStorage.setItem('stellar-ads-user-email', result.email);
+                    localStorage.setItem('stellar-ads-user-key', result.publicKey);
+
+                    // Redirecionar para o dashboard
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 1000);
+
+                } else {
+                    showAlert(result.error, 'error');
+                }
+            } catch (error) {
+                console.error('Erro no login:', error);
+                showAlert('Erro ao fazer login. Tente novamente.', 'error');
+            }
+        }
+
+        // Registrar nova conta
+        async function register() {
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            const confirmPassword = document.getElementById('register-confirm').value;
+
+            if (!email || !password || !confirmPassword) {
+                showAlert('Por favor, preencha todos os campos', 'error');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showAlert('As senhas não coincidem', 'error');
+                return;
+            }
+
+            if (password.length < 6) {
+                showAlert('A senha deve ter pelo menos 6 caracteres', 'error');
+                return;
+            }
+
+            try {
+                showAlert('Criando conta e carteira Stellar... Aguarde.', 'success');
+
+                const response = await fetch('/wallet/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showAlert(`🎉 Conta criada com sucesso! Carteira Stellar: ${result.publicKey.substring(0, 20)}...`, 'success');
+                    
+                    setTimeout(() => {
+                        showAlert('Agora faça login com suas credenciais', 'success');
+                        showLoginForm();
+                        // Preencher email no formulário de login
+                        document.getElementById('login-email').value = email;
+                    }, 2000);
+
+                } else {
+                    showAlert(result.error, 'error');
+                }
+            } catch (error) {
+                console.error('Erro no registro:', error);
+                showAlert('Erro ao criar conta. Tente novamente.', 'error');
+            }
+        }
+
+        // Função para mostrar alertas
+        function showAlert(message, type) {
+            const alertContainer = document.getElementById('alert-container');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            
+            alertContainer.innerHTML = '';
+            alertContainer.appendChild(alert);
+            
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+
+        // Verificar se usuário já está logado
+        window.addEventListener('load', () => {
+            const userId = localStorage.getItem('stellar-ads-user-id');
+            if (userId) {
+                showAlert('Você já está logado! Redirecionando...', 'success');
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 1000);
+            }
+        });
+
+        // Permitir login com Enter
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                if (document.getElementById('login-form').style.display !== 'none') {
+                    login();
+                } else {
+                    register();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Stellar Ads Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            color: #5a67d8;
+            margin-bottom: 10px;
+        }
+        
+        .user-info {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .user-info span {
+            background: #f7fafc;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .tab {
+            background: rgba(255,255,255,0.9);
+            border: none;
+            padding: 15px 25px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .tab.active {
+            background: white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        
+        .tab-content {
+            display: none;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+        
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            outline: none;
+            border-color: #5a67d8;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s ease;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        }
+        
+        .campaigns-grid, .sites-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .campaign-card, .site-card {
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 20px;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+        
+        .campaign-card:hover, .site-card:hover {
+            border-color: #5a67d8;
+            transform: translateY(-5px);
+        }
+        
+        .campaign-image {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .stat-item {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            flex: 1;
+        }
+        
+        .stat-item h3 {
+            color: #5a67d8;
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status-active { background: #c6f6d5; color: #22543d; }
+        .status-pending { background: #faf089; color: #744210; }
+        .status-inactive { background: #fed7d7; color: #742a2a; }
+        
+        .sdk-code {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            margin-top: 15px;
+            white-space: pre-wrap;
+            font-size: 14px;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-success { background: #c6f6d5; color: #22543d; }
+        .alert-error { background: #fed7d7; color: #742a2a; }
+        
+        @media (max-width: 768px) {
+            .stats {
+                flex-direction: column;
+            }
+            
+            .user-info {
+                flex-direction: column;
+            }
+            
+            .campaigns-grid, .sites-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Dashboard - Stellar Ads Management</h1>
+            <p>Gerencie suas campanhas publicitárias e sites com recompensas em XLM</p>
+            <div class="user-info">
+                <span id="user-email">📧 Email: Carregando...</span>
+                <span id="user-key">🔑 Chave Pública: Carregando...</span>
+                <span id="user-type">👤 Tipo: Carregando...</span>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('overview')">📊 Visão Geral</button>
+            <button class="tab" onclick="switchTab('campaigns')">🎯 Campanhas</button>
+            <button class="tab" onclick="switchTab('sites')">🌐 Sites</button>
+        </div>
+
+        <!-- Aba Visão Geral -->
+        <div id="overview-content" class="tab-content active">
+            <h2>📈 Resumo da Conta</h2>
+            <div class="stats">
+                <div class="stat-item">
+                    <h3 id="total-campaigns">0</h3>
+                    <p>Campanhas</p>
+                </div>
+                <div class="stat-item">
+                    <h3 id="total-sites">0</h3>
+                    <p>Sites</p>
+                </div>
+                <div class="stat-item">
+                    <h3 id="total-clicks">0</h3>
+                    <p>Cliques</p>
+                </div>
+                <div class="stat-item">
+                    <h3 id="total-impressions">0</h3>
+                    <p>Impressões</p>
+                </div>
+                <div class="stat-item">
+                    <h3 id="total-spent">0</h3>
+                    <p>XLM Gasto</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Aba Campanhas -->
+        <div id="campaigns-content" class="tab-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2>🎯 Minhas Campanhas</h2>
+                <button class="btn" onclick="showCreateCampaignForm()">➕ Nova Campanha</button>
+            </div>
+
+            <!-- Formulário de criação de campanha -->
+            <div id="campaign-form" style="display: none; background: #f7fafc; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                <h3>Criar Nova Campanha</h3>
+                <div class="form-group">
+                    <label>Nome do Anunciante</label>
+                    <input type="text" id="advertiser-name" placeholder="Ex: Minha Empresa">
+                </div>
+                <div class="form-group">
+                    <label>Título da Campanha</label>
+                    <input type="text" id="campaign-title" placeholder="Ex: Promoção de Verão">
+                </div>
+                <div class="form-group">
+                    <label>Descrição</label>
+                    <textarea id="campaign-description" placeholder="Descrição da campanha..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>URL da Imagem</label>
+                    <input type="url" id="campaign-image" placeholder="https://exemplo.com/imagem.jpg">
+                </div>
+                <div class="form-group">
+                    <label>URL de Destino</label>
+                    <input type="url" id="campaign-url" placeholder="https://meusite.com">
+                </div>
+                <div class="form-group">
+                    <label>Orçamento (XLM)</label>
+                    <input type="number" id="campaign-budget" step="0.01" placeholder="100.00">
+                </div>
+                <div class="form-group">
+                    <label>Custo por Clique (XLM)</label>
+                    <input type="number" id="campaign-cpc" step="0.01" placeholder="0.20">
+                </div>
+                <div class="form-group">
+                    <label>Tags (separadas por vírgula)</label>
+                    <input type="text" id="campaign-tags" placeholder="tecnologia, programacao, startups">
+                </div>
+                <button class="btn" onclick="createCampaign()">✅ Criar Campanha</button>
+                <button class="btn btn-danger" onclick="hideCreateCampaignForm()">❌ Cancelar</button>
+            </div>
+
+            <div id="campaigns-grid" class="campaigns-grid">
+                <!-- Campanhas serão carregadas aqui -->
+            </div>
+        </div>
+
+        <!-- Aba Sites -->
+        <div id="sites-content" class="tab-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2>🌐 Meus Sites</h2>
+                <button class="btn" onclick="showCreateSiteForm()">➕ Novo Site</button>
+            </div>
+
+            <!-- Formulário de criação de site -->
+            <div id="site-form" style="display: none; background: #f7fafc; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                <h3>Cadastrar Novo Site</h3>
+                <div class="form-group">
+                    <label>Nome do Site</label>
+                    <input type="text" id="site-name" placeholder="Ex: Meu Blog">
+                </div>
+                <div class="form-group">
+                    <label>Domínio</label>
+                    <input type="text" id="site-domain" placeholder="Ex: meublog.com">
+                </div>
+                <div class="form-group">
+                    <label>Revenue Share (%)</label>
+                    <input type="number" id="site-revenue" min="0" max="1" step="0.01" value="0.7" placeholder="0.7">
+                    <small>Porcentagem da receita que você receberá (padrão: 70%)</small>
+                </div>
+                <button class="btn" onclick="createSite()">✅ Cadastrar Site</button>
+                <button class="btn btn-danger" onclick="hideCreateSiteForm()">❌ Cancelar</button>
+            </div>
+
+            <div id="sites-grid" class="sites-grid">
+                <!-- Sites serão carregados aqui -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para SDK Code -->
+    <div id="sdk-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 15px; max-width: 800px; width: 90%;">
+            <h3>📋 Código SDK para seu Site</h3>
+            <p>Copie e cole este código no seu site onde você quer que os anúncios apareçam:</p>
+            <div id="sdk-code-content" class="sdk-code"></div>
+            <button class="btn" onclick="copySDKCode()">📋 Copiar Código</button>
+            <button class="btn btn-danger" onclick="closeSdkModal()" style="margin-left: 10px;">❌ Fechar</button>
+        </div>
+    </div>
+
+    <script>
+        let currentUserId = localStorage.getItem('stellar-ads-user-id');
+        let dashboardData = {};
+
+        // Verificar se usuário está logado
+        if (!currentUserId) {
+            alert('Você precisa fazer login primeiro!');
+            window.location.href = 'login.html';
+        }
+
+        // Carregar dados do dashboard
+        async function loadDashboard() {
+            try {
+                const response = await fetch(`/dashboard/${currentUserId}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    dashboardData = data;
+                    updateUI();
+                } else {
+                    showAlert(data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao carregar dashboard:', error);
+                showAlert('Erro ao carregar dados do dashboard', 'error');
+            }
+        }
+
+        // Atualizar interface
+        function updateUI() {
+            // Atualizar informações do usuário
+            document.getElementById('user-email').textContent = `📧 Email: ${dashboardData.user.email}`;
+            document.getElementById('user-key').textContent = `🔑 Chave: ${dashboardData.user.publicKey.substring(0, 20)}...`;
+            document.getElementById('user-type').textContent = `👤 Tipo: ${dashboardData.user.userType || 'advertiser'}`;
+
+            // Atualizar estatísticas
+            document.getElementById('total-campaigns').textContent = dashboardData.summary.totalCampaigns;
+            document.getElementById('total-sites').textContent = dashboardData.summary.totalSites;
+            document.getElementById('total-clicks').textContent = dashboardData.summary.totalClicks;
+            document.getElementById('total-impressions').textContent = dashboardData.summary.totalImpressions;
+            document.getElementById('total-spent').textContent = dashboardData.summary.totalSpent.toFixed(4);
+
+            // Carregar campanhas
+            loadCampaigns();
+            
+            // Carregar sites
+            loadSites();
+        }
+
+        // Carregar campanhas
+        function loadCampaigns() {
+            const grid = document.getElementById('campaigns-grid');
+            grid.innerHTML = '';
+
+            dashboardData.campaigns.forEach(campaign => {
+                const card = document.createElement('div');
+                card.className = 'campaign-card';
+                
+                const statusClass = campaign.active ? 'status-active' : 'status-inactive';
+                const statusText = campaign.active ? 'ativa' : 'inativa';
+                
+                card.innerHTML = `
+                    <img src="${campaign.image_url}" alt="${campaign.title}" class="campaign-image" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjE1MCIgdmlld0JveD0iMCAwIDMwMCAxNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMTUwIiBmaWxsPSIjRjdGQUZDIi8+Cjx0ZXh0IHg9IjE1MCIgeT0iNzUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM0QTU1NjgiPkltYWdlbTwvdGV4dD4KPC9zdmc+'">
+                    <h4>${campaign.title}</h4>
+                    <p><strong>${campaign.advertiser_name}</strong></p>
+                    <p>Orçamento: ${campaign.budget_xlm} XLM</p>
+                    <p>Gasto: ${campaign.spent_xlm} XLM</p>
+                    <p>CPC: ${campaign.cost_per_click} XLM</p>
+                    <div style="margin: 10px 0;">
+                        <span class="status-badge ${statusClass}">${statusText}</span>
+                    </div>
+                    <div class="stats" style="margin: 10px 0; font-size: 12px;">
+                        <div>👁️ ${campaign.total_impressions || 0}</div>
+                        <div>👆 ${campaign.total_clicks || 0}</div>
+                        <div>💰 ${parseFloat(campaign.total_revenue || 0).toFixed(4)} XLM</div>
+                    </div>
+                    <button class="btn" onclick="editCampaign('${campaign.id}')" style="margin-right: 10px;">✏️ Editar</button>
+                    <button class="btn btn-danger" onclick="deleteCampaign('${campaign.id}')">🗑️ Deletar</button>
+                `;
+                
+                grid.appendChild(card);
+            });
+
+            if (dashboardData.campaigns.length === 0) {
+                grid.innerHTML = '<p style="text-align: center; color: #666; grid-column: 1/-1;">Nenhuma campanha criada ainda. Clique em "Nova Campanha" para começar!</p>';
+            }
+        }
+
+        // Carregar sites
+        function loadSites() {
+            const grid = document.getElementById('sites-grid');
+            grid.innerHTML = '';
+
+            dashboardData.sites.forEach(site => {
+                const card = document.createElement('div');
+                card.className = 'site-card';
+                
+                const statusClass = site.status === 'active' ? 'status-active' : 
+                                  site.status === 'pending' ? 'status-pending' : 'status-inactive';
+                
+                card.innerHTML = `
+                    <h4>🌐 ${site.name}</h4>
+                    <p><strong>Domínio:</strong> ${site.domain}</p>
+                    <p><strong>Revenue Share:</strong> ${(site.revenue_share * 100).toFixed(0)}%</p>
+                    <p><strong>Criado em:</strong> ${new Date(site.created_at).toLocaleDateString()}</p>
+                    <div style="margin: 10px 0;">
+                        <span class="status-badge ${statusClass}">${site.status}</span>
+                    </div>
+                    <button class="btn" onclick="showSDKCode('${site.id}')" style="margin-right: 10px;">📋 Código SDK</button>
+                    <button class="btn" onclick="editSite('${site.id}')" style="margin-right: 10px;">✏️ Editar</button>
+                    <button class="btn btn-danger" onclick="deleteSite('${site.id}')">🗑️ Deletar</button>
+                `;
+                
+                grid.appendChild(card);
+            });
+
+            if (dashboardData.sites.length === 0) {
+                grid.innerHTML = '<p style="text-align: center; color: #666; grid-column: 1/-1;">Nenhum site cadastrado ainda. Clique em "Novo Site" para começar!</p>';
+            }
+        }
+
+        // Trocar abas
+        function switchTab(tabName) {
+            // Remover classe active de todas as abas
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Ativar aba selecionada
+            event.target.classList.add('active');
+            document.getElementById(`${tabName}-content`).classList.add('active');
+        }
+
+        // Funções de campanha
+        function showCreateCampaignForm() {
+            document.getElementById('campaign-form').style.display = 'block';
+        }
+
+        function hideCreateCampaignForm() {
+            document.getElementById('campaign-form').style.display = 'none';
+            // Limpar campos
+            document.querySelectorAll('#campaign-form input, #campaign-form textarea').forEach(input => input.value = '');
+        }
+
+        async function createCampaign() {
+            const campaignData = {
+                userId: currentUserId,
+                advertiserName: document.getElementById('advertiser-name').value,
+                title: document.getElementById('campaign-title').value,
+                description: document.getElementById('campaign-description').value,
+                imageUrl: document.getElementById('campaign-image').value,
+                targetUrl: document.getElementById('campaign-url').value,
+                budgetXlm: parseFloat(document.getElementById('campaign-budget').value),
+                costPerClick: parseFloat(document.getElementById('campaign-cpc').value),
+                tags: document.getElementById('campaign-tags').value.split(',').map(tag => tag.trim())
+            };
+
+            try {
+                const response = await fetch('/advertisements', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(campaignData)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showAlert('Campanha criada com sucesso!', 'success');
+                    hideCreateCampaignForm();
+                    loadDashboard(); // Recarregar dados
+                } else {
+                    showAlert(result.error, 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao criar campanha:', error);
+                showAlert('Erro ao criar campanha', 'error');
+            }
+        }
+
+        // Funções de site
+        function showCreateSiteForm() {
+            document.getElementById('site-form').style.display = 'block';
+        }
+
+        function hideCreateSiteForm() {
+            document.getElementById('site-form').style.display = 'none';
+            // Limpar campos
+            document.querySelectorAll('#site-form input').forEach(input => {
+                if (input.id !== 'site-revenue') input.value = '';
+            });
+        }
+
+        async function createSite() {
+            const siteData = {
+                userId: currentUserId,
+                name: document.getElementById('site-name').value,
+                domain: document.getElementById('site-domain').value,
+                revenueShare: parseFloat(document.getElementById('site-revenue').value)
+            };
+
+            try {
+                const response = await fetch('/sites', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(siteData)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showAlert('Site cadastrado com sucesso!', 'success');
+                    hideCreateSiteForm();
+                    loadDashboard(); // Recarregar dados
+                } else {
+                    showAlert(result.error, 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao cadastrar site:', error);
+                showAlert('Erro ao cadastrar site', 'error');
+            }
+        }
+
+        // Mostrar código SDK
+        async function showSDKCode(siteId) {
+            try {
+                const response = await fetch(`/sites/${siteId}/sdk-code`);
+                const result = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('sdk-code-content').textContent = result.sdkCode;
+                    document.getElementById('sdk-modal').style.display = 'block';
+                } else {
+                    showAlert(result.error, 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao buscar código SDK:', error);
+                showAlert('Erro ao buscar código SDK', 'error');
+            }
+        }
+
+        function closeSdkModal() {
+            document.getElementById('sdk-modal').style.display = 'none';
+        }
+
+        function copySDKCode() {
+            const codeElement = document.getElementById('sdk-code-content');
+            navigator.clipboard.writeText(codeElement.textContent).then(() => {
+                showAlert('Código SDK copiado para a área de transferência!', 'success');
+            }).catch(() => {
+                showAlert('Erro ao copiar código SDK', 'error');
+            });
+        }
+
+        // Funções auxiliares
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            
+            document.querySelector('.container').insertBefore(alertDiv, document.querySelector('.header').nextSibling);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+
+        // Placeholder para funções de edição e exclusão
+        function editCampaign(campaignId) {
+            // TODO: Implementar edição de campanha
+            showAlert('Funcionalidade de edição em desenvolvimento', 'error');
+        }
+
+        function deleteCampaign(campaignId) {
+            if (confirm('Tem certeza que deseja deletar esta campanha?')) {
+                // TODO: Implementar exclusão
+                showAlert('Funcionalidade de exclusão em desenvolvimento', 'error');
+            }
+        }
+
+        function editSite(siteId) {
+            // TODO: Implementar edição de site
+            showAlert('Funcionalidade de edição em desenvolvimento', 'error');
+        }
+
+        function deleteSite(siteId) {
+            if (confirm('Tem certeza que deseja deletar este site?')) {
+                // TODO: Implementar exclusão
+                showAlert('Funcionalidade de exclusão em desenvolvimento', 'error');
+            }
+        }
+
+        // Carregar dashboard ao carregar a página
+        window.addEventListener('load', loadDashboard);
+    </script>
+</body>
+</html>

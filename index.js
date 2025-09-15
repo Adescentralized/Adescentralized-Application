@@ -2,11 +2,21 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const bcrypt = require('bcrypt');
+const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+// Servir arquivos estáticos
+app.use(express.static('public'));
+
+// Rota raiz redireciona para login
+app.get('/', (req, res) => {
+    res.redirect('/login.html');
+});
 
 app.get('/health-check', (req, res) => {
     res.status(200).json({ status: 'ok' });
@@ -186,14 +196,315 @@ app.post('/transfer', async (req, res) => {
 });
 
 // Advertisements
-app.post('/advertisements', (req, res) => {
-    //
+app.post('/advertisements', async (req, res) => {
+    const { userId, advertiserName, title, description, imageUrl, targetUrl, budgetXlm, costPerClick, tags } = req.body;
+    
+    if (!userId || !advertiserName || !title || !imageUrl || !targetUrl || !budgetXlm || !costPerClick) {
+        return res.status(400).json({ error: 'Todos os campos obrigatórios devem ser preenchidos' });
+    }
+
+    const db = require('./src/database.js');
+    const { v4: uuidv4 } = require('uuid');
+    const stellar = require('./src/stellar.js');
+
+    // Verificar se o usuário existe
+    db.get("SELECT * FROM users WHERE id = ?", [userId], async (err, user) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        if (!user) {
+            return res.status(404).json({ error: 'Usuário não encontrado' });
+        }
+
+        const campaignId = `campaign_${Date.now()}_${uuidv4().substring(0, 8)}`;
+        
+        db.run(
+            `INSERT INTO campaigns (id, user_id, advertiser_name, advertiser_stellar_key, title, description, image_url, target_url, budget_xlm, cost_per_click, tags) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [campaignId, userId, advertiserName, user.publicKey, title, description, imageUrl, targetUrl, budgetXlm, costPerClick, JSON.stringify(tags || [])],
+            function(err) {
+                if (err) {
+                    return res.status(500).json({ error: err.message });
+                }
+                res.status(201).json({ 
+                    message: 'Campanha criada com sucesso!', 
+                    campaignId: campaignId,
+                    status: 'pending'
+                });
+            }
+        );
+    });
 });
+
+// Listar campanhas do usuário
+app.get('/advertisements/:userId', (req, res) => {
+    const { userId } = req.params;
+    const db = require('./src/database.js');
+
+    db.all("SELECT * FROM campaigns WHERE user_id = ? ORDER BY created_at DESC", [userId], (err, rows) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        res.status(200).json(rows);
+    });
+});
+
+// Atualizar campanha
+app.put('/advertisements/:campaignId', (req, res) => {
+    const { campaignId } = req.params;
+    const { title, description, imageUrl, targetUrl, budgetXlm, costPerClick, tags, active } = req.body;
+    const db = require('./src/database.js');
+
+    const updates = [];
+    const values = [];
+    
+    if (title) { updates.push('title = ?'); values.push(title); }
+    if (description !== undefined) { updates.push('description = ?'); values.push(description); }
+    if (imageUrl) { updates.push('image_url = ?'); values.push(imageUrl); }
+    if (targetUrl) { updates.push('target_url = ?'); values.push(targetUrl); }
+    if (budgetXlm) { updates.push('budget_xlm = ?'); values.push(budgetXlm); }
+    if (costPerClick) { updates.push('cost_per_click = ?'); values.push(costPerClick); }
+    if (tags) { updates.push('tags = ?'); values.push(JSON.stringify(tags)); }
+    if (active !== undefined) { updates.push('active = ?'); values.push(active); }
+    
+    updates.push('updated_at = CURRENT_TIMESTAMP');
+    values.push(campaignId);
+
+    if (updates.length === 1) {
+        return res.status(400).json({ error: 'Nenhum campo para atualizar' });
+    }
+
+    db.run(
+        `UPDATE campaigns SET ${updates.join(', ')} WHERE id = ?`,
+        values,
+        function(err) {
+            if (err) {
+                return res.status(500).json({ error: err.message });
+            }
+            if (this.changes === 0) {
+                return res.status(404).json({ error: 'Campanha não encontrada' });
+            }
+            res.status(200).json({ message: 'Campanha atualizada com sucesso!' });
+        }
+    );
+});
+
+// Deletar campanha
+app.delete('/advertisements/:campaignId', (req, res) => {
+    const { campaignId } = req.params;
+    const db = require('./src/database.js');
+
+    db.run("DELETE FROM campaigns WHERE id = ?", [campaignId], function(err) {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        if (this.changes === 0) {
+            return res.status(404).json({ error: 'Campanha não encontrada' });
+        }
+        res.status(200).json({ message: 'Campanha deletada com sucesso!' });
+    });
+});
+
+// Criar site (publishers)
+app.post('/sites', (req, res) => {
+    const { userId, name, domain, revenueShare } = req.body;
+    
+    if (!userId || !name || !domain) {
+        return res.status(400).json({ error: 'userId, name e domain são obrigatórios' });
+    }
+
+    const db = require('./src/database.js');
+    const { v4: uuidv4 } = require('uuid');
+
+    // Verificar se o usuário existe
+    db.get("SELECT * FROM users WHERE id = ?", [userId], (err, user) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        if (!user) {
+            return res.status(404).json({ error: 'Usuário não encontrado' });
+        }
+
+        const siteId = `site_${Date.now()}_${uuidv4().substring(0, 8)}`;
+        
+        db.run(
+            `INSERT INTO sites (id, user_id, name, domain, stellar_public_key, revenue_share) 
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [siteId, userId, name, domain, user.publicKey, revenueShare || 0.7],
+            function(err) {
+                if (err) {
+                    return res.status(500).json({ error: err.message });
+                }
+                res.status(201).json({ 
+                    message: 'Site cadastrado com sucesso!', 
+                    siteId: siteId,
+                    sdkCode: generateSDKCode(siteId)
+                });
+            }
+        );
+    });
+});
+
+// Listar sites do usuário
+app.get('/sites/:userId', (req, res) => {
+    const { userId } = req.params;
+    const db = require('./src/database.js');
+
+    db.all("SELECT * FROM sites WHERE user_id = ? ORDER BY created_at DESC", [userId], (err, rows) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        res.status(200).json(rows);
+    });
+});
+
+// Atualizar site
+app.put('/sites/:siteId', (req, res) => {
+    const { siteId } = req.params;
+    const { name, domain, revenueShare, status } = req.body;
+    const db = require('./src/database.js');
+
+    const updates = [];
+    const values = [];
+    
+    if (name) { updates.push('name = ?'); values.push(name); }
+    if (domain) { updates.push('domain = ?'); values.push(domain); }
+    if (revenueShare) { updates.push('revenue_share = ?'); values.push(revenueShare); }
+    if (status) { updates.push('status = ?'); values.push(status); }
+    
+    updates.push('updated_at = CURRENT_TIMESTAMP');
+    values.push(siteId);
+
+    if (updates.length === 1) {
+        return res.status(400).json({ error: 'Nenhum campo para atualizar' });
+    }
+
+    db.run(
+        `UPDATE sites SET ${updates.join(', ')} WHERE id = ?`,
+        values,
+        function(err) {
+            if (err) {
+                return res.status(500).json({ error: err.message });
+            }
+            if (this.changes === 0) {
+                return res.status(404).json({ error: 'Site não encontrado' });
+            }
+            res.status(200).json({ message: 'Site atualizado com sucesso!' });
+        }
+    );
+});
+
+// Gerar código SDK para o site
+app.get('/sites/:siteId/sdk-code', (req, res) => {
+    const { siteId } = req.params;
+    const db = require('./src/database.js');
+
+    db.get("SELECT * FROM sites WHERE id = ?", [siteId], (err, site) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        if (!site) {
+            return res.status(404).json({ error: 'Site não encontrado' });
+        }
+
+        const sdkCode = generateSDKCode(siteId);
+        res.status(200).json({ 
+            siteId: siteId,
+            siteName: site.name,
+            sdkCode: sdkCode 
+        });
+    });
+});
+
+// Dashboard - estatísticas do usuário
+app.get('/dashboard/:userId', (req, res) => {
+    const { userId } = req.params;
+    const db = require('./src/database.js');
+
+    // Buscar dados do usuário
+    db.get("SELECT * FROM users WHERE id = ?", [userId], (err, user) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        if (!user) {
+            return res.status(404).json({ error: 'Usuário não encontrado' });
+        }
+
+        // Buscar estatísticas de campanhas
+        db.all(`
+            SELECT 
+                c.*,
+                COALESCE(click_stats.total_clicks, 0) as total_clicks,
+                COALESCE(click_stats.total_revenue, 0) as total_revenue,
+                COALESCE(impression_stats.total_impressions, 0) as total_impressions
+            FROM campaigns c
+            LEFT JOIN (
+                SELECT campaign_id, COUNT(*) as total_clicks, SUM(payment_amount) as total_revenue
+                FROM clicks 
+                GROUP BY campaign_id
+            ) click_stats ON c.id = click_stats.campaign_id
+            LEFT JOIN (
+                SELECT campaign_id, COUNT(*) as total_impressions
+                FROM impressions 
+                GROUP BY campaign_id
+            ) impression_stats ON c.id = impression_stats.campaign_id
+            WHERE c.user_id = ?
+            ORDER BY c.created_at DESC
+        `, [userId], (err, campaigns) => {
+            if (err) {
+                return res.status(500).json({ error: err.message });
+            }
+
+            // Buscar sites se for publisher
+            db.all("SELECT * FROM sites WHERE user_id = ?", [userId], (err, sites) => {
+                if (err) {
+                    return res.status(500).json({ error: err.message });
+                }
+
+                res.status(200).json({
+                    user: {
+                        id: user.id,
+                        email: user.email,
+                        publicKey: user.publicKey,
+                        userType: user.user_type
+                    },
+                    campaigns: campaigns || [],
+                    sites: sites || [],
+                    summary: {
+                        totalCampaigns: campaigns.length,
+                        totalSites: sites.length,
+                        totalClicks: campaigns.reduce((sum, c) => sum + (c.total_clicks || 0), 0),
+                        totalImpressions: campaigns.reduce((sum, c) => sum + (c.total_impressions || 0), 0),
+                        totalSpent: campaigns.reduce((sum, c) => sum + (c.spent_xlm || 0), 0)
+                    }
+                });
+            });
+        });
+    });
+});
+
+// Função auxiliar para gerar código SDK
+function generateSDKCode(siteId) {
+    return `<!-- Stellar Ads SDK -->
+<div id="stellar-ad-container" 
+     data-site-id="${siteId}"
+     data-tags="geral">
+    <!-- Anúncios serão carregados aqui -->
+</div>
+
+<script>
+window.StellarAdsConfig = {
+    siteId: '${siteId}',
+    apiBaseUrl: 'http://localhost:3000', // Altere para sua URL de produção
+    debug: false
+};
+</script>
+<script src="http://localhost:3000/sdk.js"></script>
+<!-- Em produção: <script src="https://api.stellarads.com/sdk.js"></script> -->`;
+}
 
 const db = require('./src/database.js');
 const stellar = require('./src/stellar.js');
-const { Transaction } = require('stellar-sdk');
-const bcrypt = require('bcrypt');
 
 const PORT = process.env.PORT || 3000;
 
