@@ -1,0 +1,2 @@
+# Adescentralized-Application
+Adescentralized Platform
