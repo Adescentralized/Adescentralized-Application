@@ -12,6 +12,7 @@ app.get('/health-check', (req, res) => {
     res.status(200).json({ status: 'ok' });
 });
 
+// Account
 app.post('/get-or-create-wallet', async (req, res) => {
     const { email } = req.body;
     if (!email) {
@@ -72,7 +73,7 @@ app.get('/wallet/:email', async (req, res) => {
               type: balance.asset_type,
               balance: balance.balance
           }));
-          res.status(200).json({ publicKey: row.publicKey, balances });
+          res.status(200).json({ publicKey: row.publicKey, balances, account: account });
         } catch (e) {
             res.status(500).json({ error: `Failed to load account. We have this error: ${e}` });
         }
@@ -98,8 +99,59 @@ app.delete('/wallet/:email', (req, res) => {
     });
 });
 
+app.post('/transfer', async (req, res) => {
+    const { fromEmail, toPublicKey, amount } = req.body;
+    if (!fromEmail || !toPublicKey || !amount) {
+        return res.status(400).json({ error: 'fromEmail, toPublicKey and amount are required' });
+    }
+
+    const db = require('./src/database.js');
+    const stellar = require('./src/stellar.js');
+
+    db.get("SELECT * FROM users WHERE email = ?", [fromEmail], async (err, row) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+
+        if (!row) {
+            return res.status(404).json({ error: 'Sender not found' });
+        }
+
+        try {
+            const tx = new stellar.StellarSdk.TransactionBuilder(
+                await stellar.server.loadAccount(row.publicKey),
+                {
+                    fee: await stellar.server.fetchBaseFee(),
+                    networkPassphrase: stellar.StellarSdk.Networks.TESTNET
+                }
+            )
+            .addOperation(stellar.StellarSdk.Operation.payment({
+                destination: toPublicKey,
+                asset: stellar.StellarSdk.Asset.native(),
+                amount: amount.toString()
+            }))
+            .setTimeout(30)
+            .build();
+
+            tx.sign(stellar.StellarSdk.Keypair.fromSecret(row.secretKey));  
+
+            const transactionResult = await stellar.server
+                .submitTransaction(tx)
+
+            res.status(200).json({ message: 'Payment successful', transactionResult });
+        } catch (e) {
+            res.status(500).json({ error: `Failed to send payment. We have this error: ${e}` });
+        }
+    });
+});
+
+// Advertisements
+app.post('/advertisements', (req, res) => {
+});
+
 const db = require('./src/database.js');
 const stellar = require('./src/stellar.js');
+const { Transaction } = require('stellar-sdk');
 
 const PORT = process.env.PORT || 3000;
 
