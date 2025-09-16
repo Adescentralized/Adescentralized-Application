@@ -1,200 +1,271 @@
-# 🚀 Stellar Ads - Backend de Gerenciamento
+# Adescentralized – Core Application (Backend APIs)
 
-**Plataforma de Anúncios Descentralizada com Blockchain Stellar**
+**Decentralized Advertising Platform built on Stellar Blockchain**
 
-Este é o backend de gerenciamento que permite anunciantes e donos de sites criar campanhas e cadastrar sites para integração com o SDK de anúncios Stellar.
+This backend is the **management layer** of the Adescentralized ecosystem. It provides APIs and logic for advertisers and publishers to create campaigns, register sites, integrate the Stellar Ads SDK, and process payments with XLM. It also powers dashboards, anti-fraud logic, and reward distribution for end-users.
 
-## 📋 Funcionalidades
+---
 
-### Para Anunciantes 🎯
-- ✅ Criar e gerenciar campanhas publicitárias
-- ✅ Definir orçamento e custo por clique em XLM
-- ✅ Acompanhar métricas (impressões, cliques, gastos)
-- ✅ Sistema de tags para targeting
-- ✅ Pagamentos automáticos via Stellar
+## 1) Introduction & Context
 
-### Para Publishers (Donos de Sites) 🌐
-- ✅ Cadastrar sites para monetização
-- ✅ Gerar código SDK personalizado
-- ✅ Configurar revenue share
-- ✅ Receber pagamentos automáticos em XLM
-- ✅ Dashboard com estatísticas
+The backend enables:
 
-### Recursos Técnicos ⚡
-- ✅ Autenticação com carteiras Stellar
-- ✅ Banco de dados SQLite integrado
-- ✅ Interface web responsiva
-- ✅ API REST completa
-- ✅ Sistema anti-fraude
-- ✅ Recompensas para usuários finais
+* **Advertisers**: Campaign creation, targeting, budgets, metrics.
+* **Publishers (Hosts)**: Site registration, revenue share config, SDK integration.
+* **Users**: Earn XLM for verified ad views and clicks.
 
-## 🔧 Instalação e Uso
+It integrates directly with **Stellar (Testnet/Mainnet)** to handle account creation, token transfers, and real-time payouts.
 
-### Pré-requisitos
-- Node.js 16+ 
-- npm ou yarn
+**Mission**: Provide a transparent, fraud-resistant, fair API backbone for decentralized advertising.
 
-### 1. Instalar Dependências
+---
+
+## 2) Architecture
+
+### 2.1 Components
+
+* **Wallet API**: Account creation, login, balance, transfers.
+* **Campaigns API**: Manage advertisements.
+* **Sites API**: Manage publisher sites.
+* **Events API**: Track impressions/clicks, anti-fraud logic.
+* **Dashboard API**: Aggregated stats.
+* **Database**: SQLite (dev), PostgreSQL (prod).
+* **Blockchain**: Stellar Horizon + Friendbot (testnet) / Mainnet.
+
+### 2.2 Tech Stack
+
+* Node.js 16+ / 18+
+* Express.js
+* SQLite (dev) → PostgreSQL (prod)
+* Stellar SDK (JavaScript)
+* Helmet, Morgan, Joi
+* Jest + Supertest for testing
+
+### 2.3 High-Level Architecture Diagram
+
+<div align="center">
+
+![alt text](assets/image.png)
+
+</div>
+
+### 2.4 Sequence: Ad View to Payout
+
+<div align="center">
+
+![alt text](assets/image-1.png)
+
+</div>
+
+---
+
+## 3) Features
+
+### Advertisers 🎯
+
+* Create/manage ad campaigns.
+* Define budget & CPC (in XLM).
+* Track impressions/clicks & spend.
+* Use tags for targeting.
+* Automatic Stellar payments.
+
+### Publishers 🌐
+
+* Register websites for monetization.
+* Generate SDK integration code.
+* Configure revenue share (default 70%).
+* Receive Stellar payouts automatically.
+* Dashboard with revenue + metrics.
+
+### End-Users 👤
+
+* Earn **0.001 XLM** per verified impression.
+* Earn a % of CPC value per click.
+* Fraud protection (6h cooldown per site/user).
+
+### Technical ⚡
+
+* Authentication with Stellar wallets.
+* RESTful API.
+* Responsive web dashboard.
+* Built-in SQLite (dev) / Postgres (prod).
+* Anti-fraud system.
+* Reward system integrated with Stellar.
+
+---
+
+## 4) API Reference
+
+### Wallet
+
+* `POST /wallet/` → Create account + wallet
+* `POST /wallet/login` → Login
+* `GET /wallet/:email` → Get balance
+* `DELETE /wallet/:email` → Delete account
+
+### Campaigns
+
+* `POST /advertisements` → Create campaign
+* `GET /advertisements/:userId` → List user campaigns
+* `PUT /advertisements/:campaignId` → Update campaign
+* `DELETE /advertisements/:campaignId` → Delete campaign
+
+### Sites
+
+* `POST /sites` → Register site
+* `GET /sites/:userId` → List user sites
+* `PUT /sites/:siteId` → Update site
+* `GET /sites/:siteId/sdk-code` → Generate SDK code
+
+### Dashboard
+
+* `GET /dashboard/:userId` → Dashboard metrics
+
+### Payments
+
+* `POST /transfer` → Transfer XLM between accounts
+
+### Events
+
+* `POST /events/impression` → Register impression
+* `POST /events/click` → Register click
+
+**Sample (create campaign):**
+
+```bash
+curl -X POST http://localhost:3000/advertisements \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userId":"123",
+    "title":"Ad Title",
+    "description":"Buy now!",
+    "imageUrl":"http://example.com/ad.png",
+    "targetUrl":"http://example.com",
+    "budget":100,
+    "cpc":1,
+    "tags":["tech","gaming"]
+  }'
+```
+
+---
+
+## 5) Database Schema
+
+### Tables
+
+* **users** → email, password (hashed), stellar\_address, role
+* **campaigns** → advertiser\_id, budget, cpc, tags
+* **sites** → publisher\_id, domain, revenue\_share
+* **impressions** → site\_id, campaign\_id, user\_id, timestamp
+* **clicks** → site\_id, campaign\_id, user\_id, timestamp
+* **user\_rewards** → user\_id, amount, reason
+
+---
+
+## 6) Setup & Usage
+
+### Prerequisites
+
+* Node.js 16+ / 18+
+* npm or yarn
+* Stellar account (for admin)
+
+### Install
+
 ```bash
 npm install
 ```
 
-### 2. Iniciar Servidor de Desenvolvimento
+### Development Server
+
 ```bash
 npm run dev
 ```
 
-### 3. Acessar a Plataforma
-- **Interface Web**: http://localhost:3000
-- **Login**: http://localhost:3000/login.html  
-- **Dashboard**: http://localhost:3000/dashboard.html
-- **Health Check**: http://localhost:3000/health-check
+### Access
 
-## 🎯 Como Usar
-
-### 1. Criar Conta
-1. Acesse http://localhost:3000
-2. Clique em "Criar Nova Conta"
-3. Preencha email e senha
-4. Uma carteira Stellar será criada automaticamente
-5. A conta será financiada no testnet
-
-### 2. Para Anunciantes
-1. Faça login no dashboard
-2. Vá para aba "Campanhas"
-3. Clique em "Nova Campanha"
-4. Preencha os dados da campanha:
-   - Nome do anunciante
-   - Título e descrição
-   - URL da imagem (300x250px recomendado)
-   - URL de destino
-   - Orçamento em XLM
-   - Custo por clique
-   - Tags para targeting
-5. Campanha ficará pendente de aprovação
-
-### 3. Para Publishers
-1. Faça login no dashboard
-2. Vá para aba "Sites"
-3. Clique em "Novo Site"
-4. Cadastre seu site:
-   - Nome do site
-   - Domínio
-   - Revenue share (% que você recebe)
-5. Copie o código SDK gerado
-6. Cole no seu site onde quer os anúncios
-
-## 📊 Estrutura da API
-
-### Autenticação
-- `POST /wallet/` - Criar conta e carteira
-- `POST /wallet/login` - Fazer login
-- `GET /wallet/:email` - Consultar saldo
-- `DELETE /wallet/:email` - Deletar conta
-
-### Campanhas (Anunciantes)
-- `POST /advertisements` - Criar campanha
-- `GET /advertisements/:userId` - Listar campanhas do usuário
-- `PUT /advertisements/:campaignId` - Atualizar campanha
-- `DELETE /advertisements/:campaignId` - Deletar campanha
-
-### Sites (Publishers)
-- `POST /sites` - Cadastrar site
-- `GET /sites/:userId` - Listar sites do usuário
-- `PUT /sites/:siteId` - Atualizar site
-- `GET /sites/:siteId/sdk-code` - Gerar código SDK
-
-### Dashboard
-- `GET /dashboard/:userId` - Dados completos do dashboard
-
-### Pagamentos
-- `POST /transfer` - Transferir XLM entre contas
-
-## 🗄️ Estrutura do Banco de Dados
-
-### Tabelas Principais
-- **`users`** - Usuários (anunciantes/publishers)
-- **`campaigns`** - Campanhas publicitárias
-- **`sites`** - Sites cadastrados para monetização
-- **`clicks`** - Registro de cliques nos anúncios
-- **`impressions`** - Registro de visualizações
-- **`user_rewards`** - Sistema de recompensas para usuários finais
-
-## 🌟 Sistema de Recompensas
-
-### Como Funciona
-1. **Usuários visualizam anúncios** → Ganham 0.001 XLM por impressão
-2. **Usuários clicam em anúncios** → Ganham % do valor do clique
-3. **Publishers recebem revenue share** → 70% padrão dos cliques
-4. **Sistema anti-fraude** → Cooldown de 6h por usuário/site
-
-## 🔐 Integração com Stellar
-
-### Contas Automáticas
-- Cada usuário recebe uma carteira Stellar única
-- Financiamento automático no testnet via Friendbot
-- Pagamentos processados automaticamente
-- Todas as transações são registradas na blockchain
-
-### Stellar Testnet
-- Rede: `https://horizon-testnet.stellar.org`
-- Explorador: `https://stellar.expert/explorer/testnet`
-- Financiamento: `https://friendbot.stellar.org`
-
-## 🔧 Configuração de Produção
-
-### Variáveis de Ambiente (.env)
-```env
-PORT=3000
-DATABASE_PATH=/path/to/production.sqlite
-STELLAR_NETWORK=mainnet  # Para produção
-```
-
-### Deploy
-1. Alterar configuração para mainnet Stellar
-2. Usar base de dados PostgreSQL (recomendado)
-3. Configurar SSL e domínio
-4. Implementar rate limiting
-5. Configurar backup automático
-
-## 🔄 Integração com SDK
-
-Este backend alimenta o SDK de anúncios através das seguintes integrações:
-
-### Dados Fornecidos ao SDK
-- **Sites cadastrados** → Validação e configurações
-- **Campanhas ativas** → Pool de anúncios disponíveis
-- **Métricas em tempo real** → Impressões e cliques
-- **Pagamentos automáticos** → Recompensas em XLM
-
-### Fluxo de Dados
-```
-Backend → [Campanhas/Sites] → SDK → [Usuários] → Métricas → Backend
-```
-
-## 📞 Suporte
-
-Para dúvidas ou problemas:
-
-1. **Issues do GitHub**: Para bugs e melhorias
-2. **Documentação**: Consulte os arquivos .md no projeto
-3. **Logs**: Verifique o console do servidor
-
-## 🚧 Roadmap
-
-### Próximas Funcionalidades
-- [ ] Aprovação manual de campanhas
-- [ ] Sistema de relatórios avançados
-- [ ] Integração com mainnet Stellar
-- [ ] Dashboard administrativo
-- [ ] Sistema de notificações
-- [ ] Backup automático
-- [ ] Rate limiting avançado
-- [ ] Integração com PostgreSQL
+* **Web**: [http://localhost:3000](http://localhost:3000)
+* **Login**: [http://localhost:3000/login.html](http://localhost:3000/login.html)
+* **Dashboard**: [http://localhost:3000/dashboard.html](http://localhost:3000/dashboard.html)
+* **Health Check**: [http://localhost:3000/health-check](http://localhost:3000/health-check)
 
 ---
 
-**Desenvolvido com ❤️ para o futuro da publicidade descentralizada**
+## 7) Production Config
 
-*Última atualização: 15 de setembro de 2025*
-Adescentralized Platform
+### Environment Variables
+
+```env
+PORT=3000
+DATABASE_PATH=/var/data/ads.sqlite
+STELLAR_NETWORK=testnet # or mainnet
+HORIZON_URL=https://horizon-testnet.stellar.org
+```
+
+## 8) Rewards System
+
+* Impressions → 0.001 XLM/user.
+* Clicks → % of CPC distributed.
+* Publishers → 70% share of click revenue.
+* Fraud Control → Cooldown 6h per user/site.
+
+---
+
+## 9) Integration with Stellar
+
+* Each user receives a unique Stellar wallet.
+* Accounts auto-funded in **Testnet** via Friendbot.
+* All payments are processed and confirmed on-chain.
+* In production: `mainnet` Horizon + explorer.
+
+**Endpoints:**
+
+* Horizon Testnet: `https://horizon-testnet.stellar.org`
+* Explorer: `https://stellar.expert/explorer/testnet`
+* Friendbot: `https://friendbot.stellar.org`
+
+---
+
+## 10) Observability & Monitoring
+
+* Console + file logging (Winston).
+* Metrics: impressions, clicks, CTR, spend.
+* Alerts for fraud detection (suspicious patterns).
+* Dashboards for advertiser and publisher roles.
+
+---
+
+## 11) Roadmap
+
+* [ ] Manual campaign approvals
+* [ ] Advanced reporting
+* [ ] Stellar Mainnet rollout
+* [ ] Admin dashboard
+* [ ] Notifications system
+* [ ] Automated backups
+* [ ] PostgreSQL migration
+* [ ] Advanced anti-fraud (ML-based)
+
+---
+
+## 12) Contribution Guidelines
+
+* Follow Conventional Commits.
+* Run `npm run lint` before committing.
+* PRs must include tests + docs updates.
+* Use feature branches.
+
+---
+
+## 13) License
+
+MIT License (or Apache 2.0, update if needed)
+
+---
+
+## 14) Context Reminder
+
+Adescentralized solves **high costs, opacity, and fraud** in digital advertising using Stellar for micro-payouts and Soroban contracts for transparency. This backend is the **management hub**: campaigns, sites, events, payments, rewards.
+
+**Version**: Backend v2.0.0
+**Last Updated**: September 2025
