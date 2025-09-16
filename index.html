@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Testes - Stellar Ads</title>
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --light-color: #f8f9fa;
+            --dark-color: #343a40;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        body {
+            font-family: var(--font-family);
+            background-color: var(--light-color);
+            color: var(--dark-color);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            background: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1, h2, h3 {
+            color: var(--dark-color);
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+        }
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            background-color: #fdfdfd;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        input[type="text"],
+        input[type="email"],
+        input[type="password"],
+        input[type="number"],
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 12px 18px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .btn-secondary { background-color: var(--secondary-color); }
+        .btn-secondary:hover { background-color: #545b62; }
+        .btn-danger { background-color: var(--danger-color); }
+        .btn-danger:hover { background-color: #c82333; }
+        .btn-success { background-color: var(--success-color); }
+        .btn-success:hover { background-color: #218838; }
+        pre {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: monospace;
+        }
+        .user-info {
+            background-color: #e7f3ff;
+            border-left: 5px solid var(--primary-color);
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+        .user-info p { margin: 5px 0; }
+        .user-info strong { color: var(--primary-color); }
+        hr { border: 1px solid #eee; margin: 30px 0; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Painel de Testes - Stellar Ads</h1>
+        <p>Use este painel para interagir com a API do backend. O usuário logado é armazenado localmente para facilitar os testes.</p>
+        
+        <div class="user-info" id="userInfo" style="display: none;">
+            <h3>Usuário Logado</h3>
+            <p><strong>ID:</strong> <span id="userId"></span></p>
+            <p><strong>Email:</strong> <span id="userEmail"></span></p>
+            <p><strong>Public Key:</strong> <span id="userPublicKey"></span></p>
+            <button onclick="logout()">Logout</button>
+        </div>
+
+        <hr>
+
+        <div class="grid">
+            <div class="card">
+                <h2>1. Usuários e Carteira</h2>
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" placeholder="seu@email.com">
+                </div>
+                <div class="form-group">
+                    <label for="password">Senha:</label>
+                    <input type="password" id="password" placeholder="Sua senha">
+                </div>
+                <button onclick="createUser()">Criar Usuário</button>
+                <button class="btn-success" onclick="loginUser()">Login</button>
+                <button class="btn-secondary" onclick="getWallet()">Ver Saldo</button>
+                <button class="btn-danger" onclick="deleteUser()">Deletar Usuário</button>
+            </div>
+
+            <div class="card">
+                <h2>2. Transferência de XLM</h2>
+                 <div class="form-group">
+                    <label for="toPublicKey">Chave Pública do Destino:</label>
+                    <input type="text" id="toPublicKey" placeholder="G...">
+                </div>
+                <div class="form-group">
+                    <label for="amount">Valor (XLM):</label>
+                    <input type="number" id="amount" placeholder="10.5">
+                </div>
+                <button onclick="transferXLM()">Enviar XLM</button>
+            </div>
+            
+            <div class="card">
+                <h2>3. Campanhas (Anunciante)</h2>
+                <div class="form-group">
+                    <label for="campaignTitle">Título:</label>
+                    <input type="text" id="campaignTitle" value="Compre Nosso Novo Produto!">
+                </div>
+                 <div class="form-group">
+                    <label for="advertiserName">Nome do Anunciante:</label>
+                    <input type="text" id="advertiserName" value="Minha Empresa Inc.">
+                </div>
+                <div class="form-group">
+                    <label for="imageUrl">URL da Imagem:</label>
+                    <input type="text" id="imageUrl" value="https://via.placeholder.com/300x250.png?text=Meu+Anúncio">
+                </div>
+                <div class="form-group">
+                    <label for="targetUrl">URL de Destino:</label>
+                    <input type="text" id="targetUrl" value="https://google.com">
+                </div>
+                <div class="form-group">
+                    <label for="budget">Orçamento (XLM):</label>
+                    <input type="number" id="budget" value="100">
+                </div>
+                <div class="form-group">
+                    <label for="cpc">Custo por Clique (XLM):</label>
+                    <input type="number" id="cpc" value="0.5">
+                </div>
+                <button onclick="createCampaign()">Criar Campanha</button>
+                <button class="btn-secondary" onclick="listCampaigns()">Listar Minhas Campanhas</button>
+            </div>
+
+            <div class="card">
+                <h2>4. Sites (Publisher)</h2>
+                <div class="form-group">
+                    <label for="siteName">Nome do Site:</label>
+                    <input type="text" id="siteName" placeholder="Meu Blog de Notícias">
+                </div>
+                <div class="form-group">
+                    <label for="siteDomain">Domínio:</label>
+                    <input type="text" id="siteDomain" placeholder="meusite.com">
+                </div>
+                <button onclick="createSite()">Cadastrar Site</button>
+                <button class="btn-secondary" onclick="listSites()">Listar Meus Sites</button>
+            </div>
+        </div>
+
+        <hr>
+
+        <div class="card">
+             <h2>5. Dashboard e Resultados</h2>
+             <button onclick="getDashboard()">Carregar Meu Dashboard</button>
+             <h3>Resultado da API:</h3>
+             <pre id="apiResult">Aguardando requisição...</pre>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000';
+        let loggedInUser = null;
+
+        // --- FUNÇÕES AUXILIARES ---
+        function showResult(data) {
+            document.getElementById('apiResult').textContent = JSON.stringify(data, null, 2);
+        }
+
+        function getEmailInput() {
+            return document.getElementById('email').value;
+        }
+        
+        function getPasswordInput() {
+            return document.getElementById('password').value;
+        }
+
+        function checkLoggedIn() {
+            if (!loggedInUser || !loggedInUser.id) {
+                alert('Você precisa estar logado para realizar esta ação.');
+                return false;
+            }
+            return true;
+        }
+
+        function saveUserToLocalStorage(user) {
+            localStorage.setItem('loggedInUser', JSON.stringify(user));
+            loggedInUser = user;
+            updateUserInfoUI();
+        }
+
+        function loadUserFromLocalStorage() {
+            const user = localStorage.getItem('loggedInUser');
+            if (user) {
+                loggedInUser = JSON.parse(user);
+                updateUserInfoUI();
+            }
+        }
+
+        function updateUserInfoUI() {
+            const userInfoDiv = document.getElementById('userInfo');
+            if (loggedInUser) {
+                document.getElementById('userId').textContent = loggedInUser.id;
+                document.getElementById('userEmail').textContent = loggedInUser.email;
+                document.getElementById('userPublicKey').textContent = loggedInUser.publicKey;
+                userInfoDiv.style.display = 'block';
+            } else {
+                userInfoDiv.style.display = 'none';
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('loggedInUser');
+            loggedInUser = null;
+            updateUserInfoUI();
+            showResult({ message: 'Logout realizado com sucesso.' });
+        }
+        
+        window.onload = loadUserFromLocalStorage;
+
+        // --- FUNÇÕES DA API ---
+
+        // 1. USUÁRIOS E CARTEIRA
+        async function createUser() {
+            const email = getEmailInput();
+            const password = getPasswordInput();
+            if (!email || !password) return alert('Email e senha são obrigatórios.');
+
+            try {
+                const response = await fetch(`${API_URL}/wallet`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await response.json();
+                showResult(data);
+                if(response.ok) alert('Usuário criado! Agora faça o login.');
+            } catch (error) {
+                showResult({ error: error.message });
+            }
+        }
+
+        async function loginUser() {
+            const email = getEmailInput();
+            const password = getPasswordInput();
+            if (!email || !password) return alert('Email e senha são obrigatórios.');
+
+            try {
+                const response = await fetch(`${API_URL}/wallet/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await response.json();
+                showResult(data);
+                if (response.ok) {
+                    saveUserToLocalStorage(data);
+                }
+            } catch (error) {
+                showResult({ error: error.message });
+            }
+        }
+
+        async function getWallet() {
+            const email = getEmailInput() || (loggedInUser ? loggedInUser.email : '');
+            if (!email) return alert('Digite um email ou faça login para ver o saldo.');
+
+            try {
+                const response = await fetch(`${API_URL}/wallet/${email}`);
+                const data = await response.json();
+                showResult(data);
+            } catch (error) {
+                showResult({ error: error.message });
+            }
+        }
+
+        async function deleteUser() {
+            const email = getEmailInput();
+            if (!email) return alert('Digite o email do usuário a ser deletado.');
+            if (!confirm(`Tem certeza que deseja deletar o usuário ${email}? Esta ação é irreversível.`)) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/wallet/${email}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                showResult(data);
+                if (loggedInUser && loggedInUser.email === email) {
+                    logout();
+                }
+            } catch (error) {
+                showResult({ error: error.message });
+            }
+        }
+        
+        // 2. TRANSFERÊNCIAS
+        async function transferXLM() {
+            if (!checkLoggedIn()) return;
+            
+            const toPublicKey = document.getElementById('toPublicKey').value;
+            const amount = document.getElementById('amount').value;
+
+            if (!toPublicKey || !amount) return alert('Destino e valor são obrigatórios.');
+
+            try {
+                 const response = await fetch(`${API_URL}/transfer`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        fromEmail: loggedInUser.email, 
+                        toPublicKey, 
+                        amount 
+                    })
+                });
+                const data = await response.json();
+                showResult(data);
+            } catch (error) {
+                showResult({ error: error.message });
+            }
+        }
+
+        // 3. CAMPANHAS
+        async function createCampaign() {
+            if (!checkLoggedIn()) return;
+
+            const campaignData = {
+                userId: loggedInUser.id,
+                advertiserName: document.getElementById('advertiserName').value,
+                title: document.getElementById('campaignTitle').value,
+                imageUrl: document.getElementById('imageUrl').value,
+                targetUrl: document.getElementById('targetUrl').value,
+                budgetXlm: parseFloat(document.getElementById('budget').value),
+                costPerClick: parseFloat(document.getElementById('cpc').value),
+                tags: ['geral', 'teste']
+            };
+            
+            if (!campaignData.title || !campaignData.budgetXlm || !campaignData.costPerClick) {
+                return alert('Título, Orçamento e CPC são obrigatórios.');
+            }
+
+            try {
+                 const response = await fetch(`${API_URL}/advertisements`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(campaignData)
+                });
+                const data = await response.json();
+                showResult(data);
+            } catch (error) {
+                showResult({ error: error.message });
+            }
+        }
+
+        async function listCampaigns() {
+            if (!checkLoggedIn()) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/advertisements/${loggedInUser.id}`);
+                const data = await response.json();
+                showResult(data);
+            } catch (error) {
+                showResult({ error: error.message });
+            }
+        }
+        
+        // 4. SITES
+        async function createSite() {
+            if (!checkLoggedIn()) return;
+            
+            const siteData = {
+                userId: loggedInUser.id,
+                name: document.getElementById('siteName').value,
+                domain: document.getElementById('siteDomain').value
+            };
+
+            if (!siteData.name || !siteData.domain) {
+                return alert('Nome e domínio do site são obrigatórios.');
+            }
+
+             try {
+                 const response = await fetch(`${API_URL}/sites`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(siteData)
+                }); 
+                const data = await response.json();
+                showResult(data);
+            } catch (error) {
+                showResult({ error: error.message });
+            }
+        }
+
+        async function listSites() {
+             if (!checkLoggedIn()) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/sites/${loggedInUser.id}`);
+                const data = await response.json();
+                showResult(data);
+            } catch (error) {
+                showResult({ error: error.message });
+            }
+        }
+
+        // 5. DASHBOARD
+        async function getDashboard() {
+            if (!checkLoggedIn()) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/dashboard/${loggedInUser.id}`);
+                const data = await response.json();
+                showResult(data);
+            } catch (error) {
+                showResult({ error: error.message });
+            }
+        }
+
+    </script>
+</body>
+</html>

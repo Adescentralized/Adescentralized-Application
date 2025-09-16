@@ -4,6 +4,8 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const { v4: uuidv4 } = require('uuid');
+const jwt = require('jsonwebtoken'); 
+const authMiddleware = require('./src/authMiddleware.js'); 
 
 const app = express();
 
@@ -23,9 +25,9 @@ app.get('/health-check', (req, res) => {
 });
 
 // Account
-app.post('/wallet/', async (req, res) => {
-    const { email, password } = req.body;
-    if (!email) {
+app.post('/wallet/', authMiddleware, async (req, res) => {
+    const { email, password, name } = req.body; // << ADICIONAR name
+    if (!email || !password || !name) {
         return res.status(400).json({ error: 'Email is required' });
     }
 
@@ -50,14 +52,15 @@ app.post('/wallet/', async (req, res) => {
             const saltRounds = 10;
             const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-            db.run(
-                "INSERT INTO users (email, password, publicKey, secretKey) VALUES (?, ?, ?, ?)",
-                [email, hashedPassword, publicKey, secretKey],
+             db.run(
+                // << ATUALIZAR SQL E PARÂMETROS
+                "INSERT INTO users (name, email, password, publicKey, secretKey) VALUES (?, ?, ?, ?, ?)",
+                [name, email, hashedPassword, publicKey, secretKey],
                 function(err) {
                     if (err) {
                         return res.status(500).json({ error: err.message });
                     }
-                    res.status(201).json({ publicKey });
+                    res.status(201).json({ message: "Usuário criado com sucesso!", publicKey });
                 }
             );
         } catch (e) {
@@ -66,7 +69,7 @@ app.post('/wallet/', async (req, res) => {
     });
 });
 
-app.post('/wallet/login', (req, res) => {
+app.post('/wallet/login', authMiddleware, (req, res) => {
     
     const { email, password } = req.body;
     if (!email || !password) {
@@ -90,16 +93,36 @@ app.post('/wallet/login', (req, res) => {
             return res.status(401).json({ error: 'Invalid password' });
         }
 
-        res.status(200).json({ 
-            id: row.id,
-            email: row.email,
-            message: 'Login successful', 
-            publicKey: row.publicKey 
+        // Criar o payload (dados que irão dentro do token)
+        const tokenPayload = {
+            id: user.id,
+            email: user.email,
+            name: user.name, // O nome do anunciante que precisávamos!
+            publicKey: user.publicKey
+        };
+
+        // Assinar o token com a chave secreta
+        const token = jwt.sign(
+            tokenPayload,
+            process.env.JWT_SECRET,
+            { expiresIn: '24h' } // Define a validade do token
+        );
+
+        // Retornar o token e os dados do usuário
+        res.status(200).json({
+            message: 'Login successful',
+            token: token,
+            user: {
+               id: user.id,
+               email: user.email,
+               name: user.name,
+               publicKey: user.publicKey
+            }
         });
     });
 });
 
-app.get('/wallet/:email', async (req, res) => {
+app.get('/wallet/:email', authMiddleware, async (req, res) => {
     const { email } = req.params;
     if (!email) {
         return res.status(400).json({ error: 'Email is required' });
@@ -149,7 +172,7 @@ app.delete('/wallet/:email', (req, res) => {
     });
 });
 
-app.post('/transfer', async (req, res) => {
+app.post('/transfer', authMiddleware, async (req, res) => {
     const { fromEmail, toPublicKey, amount } = req.body;
     if (!fromEmail || !toPublicKey || !amount) {
         return res.status(400).json({ error: 'fromEmail, toPublicKey and amount are required' });
@@ -195,49 +218,44 @@ app.post('/transfer', async (req, res) => {
     });
 });
 
-// Advertisements
-app.post('/advertisements', async (req, res) => {
-    const { userId, advertiserName, title, description, imageUrl, targetUrl, budgetXlm, costPerClick, tags } = req.body;
+
+app.post('/advertisements', authMiddleware, async (req, res) => {
+    // 1. Obtenha os dados do corpo da requisição
+    const { title, description, imageUrl, targetUrl, budgetXlm, costPerClick, tags } = req.body;
     
-    if (!userId || !advertiserName || !title || !imageUrl || !targetUrl || !budgetXlm || !costPerClick) {
+    // 2. Obtenha os dados do usuário a partir do token (injetados pelo middleware)
+    const { id: userId, name: advertiserName, publicKey: advertiserStellarKey } = req.user;
+
+    // 3. Validação dos campos
+    if (!title || !imageUrl || !targetUrl || !budgetXlm || !costPerClick) {
         return res.status(400).json({ error: 'Todos os campos obrigatórios devem ser preenchidos' });
     }
 
     const db = require('./src/database.js');
     const { v4: uuidv4 } = require('uuid');
-    const stellar = require('./src/stellar.js');
 
-    // Verificar se o usuário existe
-    db.get("SELECT * FROM users WHERE id = ?", [userId], async (err, user) => {
-        if (err) {
-            return res.status(500).json({ error: err.message });
-        }
-        if (!user) {
-            return res.status(404).json({ error: 'Usuário não encontrado' });
-        }
-
-        const campaignId = `campaign_${Date.now()}_${uuidv4().substring(0, 8)}`;
-        
-        db.run(
-            `INSERT INTO campaigns (id, user_id, advertiser_name, advertiser_stellar_key, title, description, image_url, target_url, budget_xlm, cost_per_click, tags) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [campaignId, userId, advertiserName, user.publicKey, title, description, imageUrl, targetUrl, budgetXlm, costPerClick, JSON.stringify(tags || [])],
-            function(err) {
-                if (err) {
-                    return res.status(500).json({ error: err.message });
-                }
-                res.status(201).json({ 
-                    message: 'Campanha criada com sucesso!', 
-                    campaignId: campaignId,
-                    status: 'pending'
-                });
+    const campaignId = `campaign_${Date.now()}_${uuidv4().substring(0, 8)}`;
+    
+    db.run(
+        `INSERT INTO campaigns (id, user_id, advertiser_name, advertiser_stellar_key, title, description, image_url, target_url, budget_xlm, cost_per_click, tags) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        // 4. Use as variáveis obtidas do token
+        [campaignId, userId, advertiserName, advertiserStellarKey, title, description, imageUrl, targetUrl, budgetXlm, costPerClick, JSON.stringify(tags || [])],
+        function(err) {
+            if (err) {
+                return res.status(500).json({ error: err.message });
             }
-        );
-    });
+            res.status(201).json({ 
+                message: 'Campanha criada com sucesso!', 
+                campaignId: campaignId,
+                status: 'pending'
+            });
+        }
+    );
 });
 
 // Listar campanhas do usuário
-app.get('/advertisements/:userId', (req, res) => {
+app.get('/advertisements/:userId', authMiddleware, (req, res) => {
     const { userId } = req.params;
     const db = require('./src/database.js');
 
@@ -306,7 +324,7 @@ app.delete('/advertisements/:campaignId', (req, res) => {
 });
 
 // Criar site (publishers)
-app.post('/sites', (req, res) => {
+app.post('/sites', authMiddleware, (req, res) => {
     const { userId, name, domain, revenueShare } = req.body;
     
     if (!userId || !name || !domain) {
@@ -346,7 +364,7 @@ app.post('/sites', (req, res) => {
 });
 
 // Listar sites do usuário
-app.get('/sites/:userId', (req, res) => {
+app.get('/sites/:userId', authMiddleware, (req, res) => {
     const { userId } = req.params;
     const db = require('./src/database.js');
 
@@ -395,7 +413,7 @@ app.put('/sites/:siteId', (req, res) => {
 });
 
 // Gerar código SDK para o site
-app.get('/sites/:siteId/sdk-code', (req, res) => {
+app.get('/sites/:siteId/sdk-code', authMiddleware, (req, res) => {
     const { siteId } = req.params;
     const db = require('./src/database.js');
 
@@ -417,7 +435,7 @@ app.get('/sites/:siteId/sdk-code', (req, res) => {
 });
 
 // Dashboard - estatísticas do usuário
-app.get('/dashboard/:userId', (req, res) => {
+app.get('/dashboard/:userId', authMiddleware, (req, res) => {
     const { userId } = req.params;
     const db = require('./src/database.js');
 

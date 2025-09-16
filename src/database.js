@@ -10,8 +10,9 @@ const db = new sqlite3.Database(DBSOURCE, (err) => {
     console.log('Connected to the SQLite database.');
     
     // Tabela de usuários
-    db.run(`CREATE TABLE IF NOT EXISTS users (
+     db.run(`CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL, -- << ADICIONE ESTA LINHA
         email TEXT NOT NULL UNIQUE,
         publicKey TEXT NOT NULL,
         secretKey TEXT NOT NULL,
