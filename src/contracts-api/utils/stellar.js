@@ -86,6 +86,26 @@ export function runStellarMeta(description, args) {
   });
 }
 
+/** Resolve an alias (like 'advertiser') to a public address (G...).
+ * If the input already looks like a public address it is returned as-is.
+ * Otherwise it runs `stellar keys public-key <alias>` to obtain the address.
+ */
+export function resolveAliasToAddr(aliasOrAddr) {
+  if (!aliasOrAddr) return Promise.reject(new Error('empty address'));
+  if (/^G[A-Z0-9]{10,}$/.test(aliasOrAddr)) return Promise.resolve(aliasOrAddr);
+  return new Promise((resolve, reject) => {
+    execFile('stellar', ['keys', 'public-key', aliasOrAddr], { timeout: 10_000 }, (err, stdout, stderr) => {
+      if (err) {
+        const msg = `[stellar:keys public-key] ${stderr || err.message}`;
+        const e = new Error(msg);
+        e.status = 400;
+        return reject(e);
+      }
+      resolve((stdout || '').trim());
+    });
+  });
+}
+
 export function invokeRead(sourceAlias, contractId, func, kvArgs = []) {
   return runStellar(
     func,
@@ -103,7 +123,7 @@ export function invokeTx(sourceAlias, contractId, func, kvArgs = []) {
       '--network', NETWORK,
       '--source', sourceAlias,
       '--id', contractId,
-      '--send', 'yes',  // <-- AQUI ESTAVA O ERRO. ADICIONADO 'yes'.
+      // '--send',  
       '--',
       func, ...kvArgs
     ]

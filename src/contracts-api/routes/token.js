@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { aliases, ids, invokeRead, invokeTx } from '../utils/stellar.js';
+import { aliases, ids, invokeRead, invokeTx, resolveAliasToAddr } from '../utils/stellar.js';
 import { ensureAddr } from '../utils/format.js';
 
 const r = Router();
@@ -7,12 +7,16 @@ const r = Router();
 /** GET /v1/token/balance/:addr -> balanceOf */
 r.get('/balance/:addr', async (req, res, next) => {
   try {
-    const addr = ensureAddr(req.params.addr);
+    const raw = req.params.addr;
+    // allow alias names like 'advertiser' or direct G... addresses
+    const addr = await resolveAliasToAddr(raw).catch(() => { throw new Error('invalid address or alias'); });
     const out = await invokeRead(
       aliases.admin, ids.token, 'balance',
-      ['--id', addr]   // para SAC padrão: "--id" é o parâmetro da função "balance"
+      ['--id', addr]
     );
-    res.json({ ok: true, address: addr, balance: JSON.parse(out) });
+    let value = null;
+    try { value = JSON.parse(out); } catch { value = out; }
+    res.json({ ok: true, address: addr, balance: value });
   } catch (e) { next(e); }
 });
 
