@@ -4,8 +4,22 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const { v4: uuidv4 } = require('uuid');
-const jwt = require('jsonwebtoken'); 
-const authMiddleware = require('./src/authMiddleware.js'); 
+
+const jwt = require('jsonwebtoken');
+const authMiddleware = require('./src/authMiddleware.js');
+const s3Service = require('./src/s3Service.js'); // << ADICIONAR
+const multer = require('multer'); // << ADICIONAR
+
+// Configuração do Multer
+const storage = multer.memoryStorage();
+const fileFilter = (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+        cb(null, true);
+    } else {
+        cb(new Error('Tipo de arquivo não suportado! Apenas imagens são permitidas.'), false);
+    }
+};
+const upload = multer({ storage: storage, fileFilter: fileFilter, limits: { fileSize: 1024 * 1024 * 5 } }); // Limite de 5MB
 
 const app = express();
 
@@ -219,39 +233,50 @@ app.post('/transfer', authMiddleware, async (req, res) => {
 });
 
 
-app.post('/advertisements', authMiddleware, async (req, res) => {
-    // 1. Obtenha os dados do corpo da requisição
-    const { title, description, imageUrl, targetUrl, budgetXlm, costPerClick, tags } = req.body;
-    
-    // 2. Obtenha os dados do usuário a partir do token (injetados pelo middleware)
-    const { id: userId, name: advertiserName, publicKey: advertiserStellarKey } = req.user;
 
-    // 3. Validação dos campos
-    if (!title || !imageUrl || !targetUrl || !budgetXlm || !costPerClick) {
-        return res.status(400).json({ error: 'Todos os campos obrigatórios devem ser preenchidos' });
+app.post('/advertisements', authMiddleware, upload.single('campaignImage'), async (req, res) => {
+    // Verifica se um arquivo foi enviado
+    if (!req.file) {
+        return res.status(400).json({ error: 'A imagem da campanha é obrigatória.' });
     }
 
-    const db = require('./src/database.js');
-    const { v4: uuidv4 } = require('uuid');
+    try {
+        // Faz o upload da imagem para o S3 e obtém a URL
+        const imageUrl = await s3Service.uploadFile(req.file);
 
-    const campaignId = `campaign_${Date.now()}_${uuidv4().substring(0, 8)}`;
-    
-    db.run(
-        `INSERT INTO campaigns (id, user_id, advertiser_name, advertiser_stellar_key, title, description, image_url, target_url, budget_xlm, cost_per_click, tags) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        // 4. Use as variáveis obtidas do token
-        [campaignId, userId, advertiserName, advertiserStellarKey, title, description, imageUrl, targetUrl, budgetXlm, costPerClick, JSON.stringify(tags || [])],
-        function(err) {
-            if (err) {
-                return res.status(500).json({ error: err.message });
-            }
-            res.status(201).json({ 
-                message: 'Campanha criada com sucesso!', 
-                campaignId: campaignId,
-                status: 'pending'
-            });
+        // O resto dos dados vem do corpo do formulário (req.body)
+        const { title, description, targetUrl, budgetXlm, costPerClick, tags } = req.body;
+        const { id: userId, name: advertiserName, publicKey: advertiserStellarKey } = req.user;
+
+        if (!title || !targetUrl || !budgetXlm || !costPerClick) {
+            return res.status(400).json({ error: 'Todos os campos obrigatórios devem ser preenchidos' });
         }
-    );
+
+        const db = require('./src/database.js');
+        const { v4: uuidv4 } = require('uuid');
+        const campaignId = `campaign_${Date.now()}_${uuidv4().substring(0, 8)}`;
+        
+        db.run(
+            `INSERT INTO campaigns (id, user_id, advertiser_name, advertiser_stellar_key, title, description, image_url, target_url, budget_xlm, cost_per_click, tags) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [campaignId, userId, advertiserName, advertiserStellarKey, title, description, imageUrl, targetUrl, parseFloat(budgetXlm), parseFloat(costPerClick), tags ? JSON.stringify(tags.split(',')) : JSON.stringify([])],
+            function(err) {
+                if (err) {
+                    return res.status(500).json({ error: err.message });
+                }
+                res.status(201).json({ 
+                    message: 'Campanha criada com sucesso!', 
+                    campaignId: campaignId,
+                    imageUrl: imageUrl, // Retorna a URL da imagem para o cliente
+                    status: 'pending'
+                });
+            }
+        );
+
+    } catch (error) {
+        console.error("Erro ao fazer upload para o S3 ou salvar no DB:", error);
+        res.status(500).json({ error: `Falha ao processar a campanha. Detalhe: ${error.message}` });
+    }
 });
 
 // Listar campanhas do usuário
