@@ -39,7 +39,7 @@ app.get('/health-check', (req, res) => {
 });
 
 // Account
-app.post('/wallet/', authMiddleware, async (req, res) => {
+app.post('/wallet/', async (req, res) => {
     const { email, password, name } = req.body; // << ADICIONAR name
     if (!email || !password || !name) {
         return res.status(400).json({ error: 'Email is required' });
@@ -83,7 +83,7 @@ app.post('/wallet/', authMiddleware, async (req, res) => {
     });
 });
 
-app.post('/wallet/login', authMiddleware, (req, res) => {
+app.post('/wallet/login', (req, res) => {
     
     const { email, password } = req.body;
     if (!email || !password) {
@@ -109,10 +109,10 @@ app.post('/wallet/login', authMiddleware, (req, res) => {
 
         // Criar o payload (dados que irão dentro do token)
         const tokenPayload = {
-            id: user.id,
-            email: user.email,
-            name: user.name, // O nome do anunciante que precisávamos!
-            publicKey: user.publicKey
+            id: row.id,
+            email: row.email,
+            name: row.name, // O nome do anunciante que precisávamos!
+            publicKey: row.publicKey
         };
 
         // Assinar o token com a chave secreta
@@ -127,10 +127,10 @@ app.post('/wallet/login', authMiddleware, (req, res) => {
             message: 'Login successful',
             token: token,
             user: {
-               id: user.id,
-               email: user.email,
-               name: user.name,
-               publicKey: user.publicKey
+               id: row.id,
+               email: row.email,
+               name: row.name,
+               publicKey: row.publicKey
             }
         });
     });
